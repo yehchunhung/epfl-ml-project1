@@ -4,6 +4,7 @@
 
 import csv
 import numpy as np
+import pandas as pd
 from activations import sigmoid
 
 
@@ -65,6 +66,7 @@ def train_val_split(y, tx, val_per, seed=1):
     np.random.seed(seed)
     total_num = len(y)
     val_num = int(total_num * val_per)
+    # get a random sequence of indices
     indices = np.random.permutation(total_num)
     val_idx, train_idx = indices[:val_num], indices[val_num:]
     return y[train_idx], y[val_idx], tx[train_idx, :], tx[val_idx, :]
@@ -114,7 +116,6 @@ def compute_lg_gradient(y, tx, w):
     return grad / y.shape[0]
 
 
-
 def batch_iter(y, tx, batch_size, num_batches=1, shuffle=True):
     """
     Generate a minibatch iterator for a dataset.
@@ -142,7 +143,11 @@ def batch_iter(y, tx, batch_size, num_batches=1, shuffle=True):
 
 
 def nn_batch_iter(y, tx, batch_size, num_batches=1, shuffle=True):
-    """Generate a minibatch iterator for a dataset."""
+    """
+    Generate a minibatch iterator for a dataset.
+    Because the input shape is different from other models
+    I need a new batch_iter for the neural network
+    """
     data_size = y.shape[1]
 
     if shuffle:
@@ -157,3 +162,63 @@ def nn_batch_iter(y, tx, batch_size, num_batches=1, shuffle=True):
         end_index = min((batch_num + 1) * batch_size, data_size)
         if start_index != end_index:
             yield shuffled_y[:, start_index:end_index], shuffled_tx[:, start_index:end_index]
+
+def standardize(x):
+    return (x - np.mean(x, axis=0)) / np.std(x, axis=0)
+
+def load_train_data_split(DATA_TRAIN_PATH):
+    
+    train = pd.read_csv(DATA_TRAIN_PATH)
+    train['Prednum'] = np.where(train['Prediction'] == 'b', 0, 1)
+    
+    x_0 = train[train['PRI_jet_num'] == 0].drop(columns=['Id', 'Prediction','PRI_jet_num',
+                                                             'DER_deltaeta_jet_jet','DER_mass_jet_jet',
+                                                             'DER_prodeta_jet_jet', 'DER_lep_eta_centrality',
+                                                             'PRI_jet_leading_pt','PRI_jet_leading_eta',
+                                                             'PRI_jet_leading_phi', 'PRI_jet_subleading_pt',
+                                                             'PRI_jet_subleading_eta','PRI_jet_subleading_phi',
+                                                             'PRI_jet_all_pt','Prednum'])
+    
+    x_1 = train[train['PRI_jet_num'] == 1].drop(columns=['Id', 'Prediction', 'PRI_jet_num',
+                                                             'DER_deltaeta_jet_jet','DER_mass_jet_jet',
+                                                             'DER_prodeta_jet_jet','DER_lep_eta_centrality',
+                                                             'PRI_jet_subleading_pt','PRI_jet_subleading_eta',
+                                                             'PRI_jet_subleading_phi','PRI_jet_all_pt','Prednum'])
+    
+    x_2 = train[(train['PRI_jet_num'] == 2) | (train['PRI_jet_num'] == 3)].drop(columns=['Id', 'Prediction', 'PRI_jet_num','Prednum'])
+     
+    y = train[['Prednum', 'PRI_jet_num', 'DER_mass_MMC']]
+    y_0 = y[y['PRI_jet_num'] == 0]['Prednum'].values
+    y_1 = y[y['PRI_jet_num'] == 1]['Prednum'].values
+    y_2 = y[(y['PRI_jet_num'] == 2) | (y['PRI_jet_num'] == 3)]['Prednum'].values
+     
+    x_0 = standardize(x_0)
+    x_1 = standardize(x_1)
+    x_2 = standardize(x_2)
+    return x_0, x_1, x_2, y_0, y_1, y_2
+
+def load_test_data_split(DATA_TEST_PATH):
+    test = pd.read_csv(DATA_TEST_PATH)
+    id_0 = test[test['PRI_jet_num'] == 0]["Id"]
+    id_1 = test[test['PRI_jet_num'] == 1]["Id"]
+    id_2 = test[(test['PRI_jet_num'] == 2) | (test['PRI_jet_num'] == 3)]["Id"]
+    
+    x_0 = test[test['PRI_jet_num'] == 0].drop(columns=['Id', 'Prediction', 'PRI_jet_num',
+                                                             'DER_deltaeta_jet_jet','DER_mass_jet_jet',
+                                                             'DER_prodeta_jet_jet', 'DER_lep_eta_centrality',
+                                                             'PRI_jet_leading_pt','PRI_jet_leading_eta',
+                                                             'PRI_jet_leading_phi', 'PRI_jet_subleading_pt',
+                                                             'PRI_jet_subleading_eta','PRI_jet_subleading_phi',
+                                                             'PRI_jet_all_pt'])
+    x_1 = test[test['PRI_jet_num'] == 1].drop(columns=['Id', 'Prediction', 'PRI_jet_num',
+                                                             'DER_deltaeta_jet_jet','DER_mass_jet_jet',
+                                                             'DER_prodeta_jet_jet','DER_lep_eta_centrality',
+                                                             'PRI_jet_subleading_pt','PRI_jet_subleading_eta',
+                                                             'PRI_jet_subleading_phi','PRI_jet_all_pt'])
+    
+    x_2 = test[(test['PRI_jet_num'] == 2) | (test['PRI_jet_num'] == 3)].drop(columns=['Id','Prediction', 'PRI_jet_num'])
+    
+    x_0 = standardize(x_0)
+    x_1 = standardize(x_1)
+    x_2 = standardize(x_2)
+    return x_0, x_1, x_2, id_0, id_1, id_2
