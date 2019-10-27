@@ -11,7 +11,6 @@ import numpy as np
 from nn import *
 from proj1_helpers import *
 
-
 def main():
     """ Main function """
     # read testing data
