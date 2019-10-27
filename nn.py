@@ -295,6 +295,7 @@ def train(x, y, x_val, y_val, nn_architecture, epochs, learning_rate, batch_size
             # in terms of validation accuracy
             if val_acc > max(val_acc_history):
                 print("Saving best model (epoch {}, val_acc: {:.4f})".format(i, val_acc))
+<<<<<<< HEAD
                 if(preprocessing):
                     np.save('best_acc_' + str(num) + '.npy', params_values)
                 else:
@@ -306,6 +307,13 @@ def train(x, y, x_val, y_val, nn_architecture, epochs, learning_rate, batch_size
                     np.save('best_loss_'+ str(num) +'.npy', params_values)
                 else:
                     np.save('best_loss.npy', params_values)                    
+=======
+                np.save('best_acc_' + str(num) + '.npy', params_values)
+            # in terms of validation loss
+            if val_loss < min(val_loss_history):
+                print("Saving best model (epoch {}, val_loss: {:.4f})".format(i, val_loss))
+                np.save('best_loss_'+ str(num) +'.npy', params_values)
+>>>>>>> e42f398487c7cd2aea3e102b5f91a3cbd34f7019
 
         # save loss and accuracy in history
         loss_history.append(loss)
