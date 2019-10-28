@@ -2,19 +2,17 @@
 
 """
 Neural Network Implementation
-I followed this tutorial
-https://towardsdatascience.com/lets-code-a-neural-network-in-plain-numpy-ae7e74410795
-and made some modifications
+We followed a tutorial and made some modifications
 """
 
 import timeit
 import numpy as np
 
-from activations import sigmoid, relu, sigmoid_backward, relu_backward
+from activations import *
 from proj1_helpers import nn_batch_iter
 
 
-# Specify the structure of the neural network
+# specify the structure of the neural network
 NN_ARCHITECTURE = [
     {"input_dim": 30, "output_dim": 64, "activation": "relu"},
     {"input_dim": 64, "output_dim": 64, "activation": "relu"},
@@ -29,20 +27,20 @@ def init_layers(nn_architecture, seed=10):
     # parameters storage initiation
     params_values = {}
 
-    # iteration over network layers
+    # iterate over network layers
     for idx, layer in enumerate(nn_architecture):
         # number network layers from 1
         layer_idx = idx + 1
 
-        # extracting the number of units in layers
-        layer_input_size = layer['input_dim']
-        layer_output_size = layer['output_dim']
+        # get the number of units in layers
+        layer_input_dim = layer['input_dim']
+        layer_output_dim = layer['output_dim']
 
         # initiating the values of the W matrix and vector b for subsequent layers
         params_values['W' + str(layer_idx)] = np.random.randn(
-            layer_output_size, layer_input_size) * 0.1
+            layer_output_dim, layer_input_dim) * 0.1
         params_values['b' + str(layer_idx)] = np.random.randn(
-            layer_output_size, 1) * 0.1
+            layer_output_dim, 1) * 0.1
 
     return params_values
 
@@ -57,6 +55,8 @@ def single_layer_forward_propagation(A_prev, W_curr, b_curr, activation):
         activation_func = relu
     elif activation == "sigmoid":
         activation_func = sigmoid
+    elif activation == "tanh":
+        activation_func = tanh
 
     # return activation a and the intermediate z matrix
     return activation_func(z_curr), z_curr
@@ -76,9 +76,9 @@ def full_forward_propagation(x, params_values, nn_architecture):
         # transfer the activation from the previous iteration
         A_prev = A_curr
 
-        # extract the activation function for the current layer
+        # get the activation function for the current layer
         activ_function_curr = layer["activation"]
-        # extract w and b for the current layer
+        # get w and b for the current layer
         W_curr = params_values["W" + str(layer_idx)]
         b_curr = params_values["b" + str(layer_idx)]
         # calculate the activation for the current layer
@@ -103,6 +103,8 @@ def single_layer_backward_propagation(dA_curr, W_curr, Z_curr, A_prev, activatio
         backward_activation_func = relu_backward
     elif activation is "sigmoid":
         backward_activation_func = sigmoid_backward
+    elif activation is "tanh":
+        backward_activation_func = tanh_backward
 
     # calculate all the derivatives
     dZ_curr = backward_activation_func(dA_curr, Z_curr)
@@ -118,20 +120,18 @@ def full_backward_propagation(Y_hat, Y, memory, params_values, nn_architecture):
     grads_values = {}
 
     # calculate first derivative
-    # The 1e-07 here is making sure it won't face division by zero
+    # The 1e-07 here is making sure it won't encounter division by zero
     dA_prev = - ((Y / (Y_hat + 1e-07)) - ((1 - Y) / (1 - Y_hat + 1e-07)))
 
     for layer_idx_prev, layer in reversed(list(enumerate(nn_architecture))):
         # number network layers from 1
         layer_idx_curr = layer_idx_prev + 1
-        # extraction of the activation function for the current layer
+        # get the activation function for the current layer
         activ_function_curr = layer["activation"]
-
+        # get input for the single layer backward propagation
         dA_curr = dA_prev
-
         A_prev = memory["A" + str(layer_idx_prev)]
         Z_curr = memory["Z" + str(layer_idx_curr)]
-
         W_curr = params_values["W" + str(layer_idx_curr)]
 
         dA_prev, dW_curr, db_curr = single_layer_backward_propagation(
@@ -143,7 +143,36 @@ def full_backward_propagation(Y_hat, Y, memory, params_values, nn_architecture):
     return grads_values
 
 
-def update(params_values, grads_values, nn_architecture, learning_rate, prev_sigma, rho=0.9):
+def update_Adam(params_values, grads_values, nn_architecture, learning_rate, t, prev_m, prev_v, beta_1=0.9, beta_2=0.999, epsilon=1e-08):
+    """Update the parameters using gradient descent with RMSprop optimizer"""
+    # the current sigma
+    m = {}
+    v = {}
+    for layer_idx, layer in enumerate(nn_architecture, 1):
+        layer_input_size = layer['input_dim']
+        layer_output_size = layer['output_dim']
+        m["W" + str(layer_idx)] = np.zeros((layer_output_size, layer_input_size))
+        m["b" + str(layer_idx)] = np.zeros((layer_output_size, 1))
+        v["W" + str(layer_idx)] = np.zeros((layer_output_size, layer_input_size))
+        v["b" + str(layer_idx)] = np.zeros((layer_output_size, 1))
+
+    # iteration over network layers
+    for layer_idx, _ in enumerate(nn_architecture, 1):
+        m["W" + str(layer_idx)] = beta_1 * prev_m["W" + str(layer_idx)] + (1 - beta_1) * grads_values["dW" + str(layer_idx)]
+        v["W" + str(layer_idx)] = beta_2 * prev_v["W" + str(layer_idx)] + (1 - beta_2) * np.power(grads_values["dW" + str(layer_idx)], 2)
+        m_hat = m["W" + str(layer_idx)] / (1 - np.power(beta_1, t))
+        v_hat = v["W" + str(layer_idx)]/ (1 - np.power(beta_2, t))
+        params_values["W" + str(layer_idx)] -= learning_rate * m_hat / (np.sqrt(v_hat) + epsilon)
+
+        m["b" + str(layer_idx)] = beta_1 * prev_m["b" + str(layer_idx)] + (1 - beta_1) * grads_values["db" + str(layer_idx)]
+        v["b" + str(layer_idx)] = beta_2 * prev_v["b" + str(layer_idx)] + (1 - beta_2) * np.power(grads_values["db" + str(layer_idx)], 2)
+        m_hat = m["b" + str(layer_idx)] / (1 - np.power(beta_1, t))
+        v_hat = v["b" + str(layer_idx)]/ (1 - np.power(beta_2, t))
+        params_values["b" + str(layer_idx)] -= learning_rate * m_hat / (np.sqrt(v_hat) + epsilon)
+
+    return params_values, m, v
+
+def update_RMSprop(params_values, grads_values, nn_architecture, learning_rate, prev_sigma, rho=0.9):
     """Update the parameters using gradient descent with RMSprop optimizer"""
     # the current sigma
     sigma = {}
@@ -175,7 +204,6 @@ def update(params_values, grads_values, nn_architecture, learning_rate, prev_sig
 
     return params_values, sigma
 
-
 def compute_nn_loss(y_hat, y):
     """Compute logistic regression loss"""
     # number of examples
@@ -192,17 +220,25 @@ def compute_nn_accuracy(y_hat, y):
     return (y_pred == y).mean()
 
 
-def train(x, y, x_val, y_val, nn_architecture, epochs, learning_rate, batch_size, verbose=False):
+def train(x, y, x_val, y_val, nn_architecture, epochs, learning_rate, batch_size, preprocessing, num, verbose=True):
     """Neural network training"""
     # initiate parameters
     params_values = init_layers(nn_architecture, 2)
-    # sigma for RMSprop optimizer
+    # parameters for optimaer (RMSprop and Adam)
     prev_sigma = {}
+    prev_m = {}
+    prev_v = {}
     for layer_idx, layer in enumerate(nn_architecture, 1):
         layer_input_size = layer['input_dim']
         layer_output_size = layer['output_dim']
-        prev_sigma["W" + str(layer_idx)] = np.zeros((layer_output_size, layer_input_size))
-        prev_sigma["b" + str(layer_idx)] = np.zeros((layer_output_size, 1))
+        if(preprocessing):
+            prev_m["W" + str(layer_idx)] = np.zeros((layer_output_size, layer_input_size))
+            prev_m["b" + str(layer_idx)] = np.zeros((layer_output_size, 1))
+            prev_v["W" + str(layer_idx)] = np.zeros((layer_output_size, layer_input_size))
+            prev_v["b" + str(layer_idx)] = np.zeros((layer_output_size, 1))
+        else:
+            prev_sigma["W" + str(layer_idx)] = np.zeros((layer_output_size, layer_input_size))
+            prev_sigma["b" + str(layer_idx)] = np.zeros((layer_output_size, 1))
 
     # initiate lists storing the history of metrics calculated during the learning process
     loss_history = []
@@ -211,12 +247,13 @@ def train(x, y, x_val, y_val, nn_architecture, epochs, learning_rate, batch_size
     val_acc_history = []
 
     start_time = timeit.default_timer()
+    t = 0
     for i in range(epochs):
-        i += 1
         b_loss_history = []
         b_acc_history = []
         # get random minibatches of data
         for b_y, b_x in nn_batch_iter(y, x, batch_size, int(y.shape[1] / batch_size)):
+            t += 1
             # calculate the output of the model
             b_y_hat, memory = full_forward_propagation(b_x, params_values, nn_architecture)
 
@@ -232,8 +269,12 @@ def train(x, y, x_val, y_val, nn_architecture, epochs, learning_rate, batch_size
             grads_values = full_backward_propagation(
                 b_y_hat, b_y, memory, params_values, nn_architecture)
             # update model weights with gradient descent and RMSprop optimizer
-            params_values, prev_sigma = update(
-                params_values, grads_values, nn_architecture, learning_rate, prev_sigma)
+            if(preprocessing):
+                params_values, prev_m, prev_v = update_Adam(
+                    params_values, grads_values, nn_architecture, learning_rate, t, prev_m, prev_v)
+            else:
+                params_values, prev_sigma = update_RMSprop(
+                    params_values, grads_values, nn_architecture, learning_rate, prev_sigma)
 
         y_val_hat, _ = full_forward_propagation(x_val, params_values, nn_architecture)
 
@@ -248,13 +289,19 @@ def train(x, y, x_val, y_val, nn_architecture, epochs, learning_rate, batch_size
         # save best model parameters
         if i > 1:
             # in terms of validation accuracy
-            if val_acc > max(val_acc_history) and val_acc > 0.832:
+            if val_acc > max(val_acc_history):
                 print("Saving best model (epoch {}, val_acc: {:.4f})".format(i, val_acc))
-                np.save('best_acc.npy', params_values)
+                if(preprocessing):
+                    np.save('best_acc_' + str(num) + '.npy', params_values)
+                else:
+                    np.save('best_acc.npy', params_values)
             # in terms of validation loss
-            if val_loss < min(val_loss_history) and val_loss < 0.375:
+            if val_loss < min(val_loss_history):
                 print("Saving best model (epoch {}, val_loss: {:.4f})".format(i, val_loss))
-                np.save('best_loss.npy', params_values)
+                if(preprocessing):
+                    np.save('best_loss_'+ str(num) +'.npy', params_values)
+                else:
+                    np.save('best_loss.npy', params_values)
 
         # save loss and accuracy in history
         loss_history.append(loss)
@@ -263,7 +310,7 @@ def train(x, y, x_val, y_val, nn_architecture, epochs, learning_rate, batch_size
         val_acc_history.append(val_acc)
 
         # print info every 50 epochs
-        if i % 50 == 0 or i == 1:
+        if i % 5 == 0 or i == 1:
             end_time = timeit.default_timer()
             if verbose:
                 print("Epoch: {:05} - {:.1f}s - loss: {:.4f} - acc: {:.4f} - val_loss: {:.4f} - val_acc: {:.4f}".format(

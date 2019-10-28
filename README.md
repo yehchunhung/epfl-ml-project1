@@ -5,6 +5,7 @@ This is one of the projects of the course, Machine Learning, in EPFL. We intend 
 
 - [Getting Started](#getting-started)
 - [Result](#result)
+- [Steps to Reproduce our Result](#steps-to-reproduce-our-result)
 - [Data Preparation](#data-preparation)
 - [Feature Engineering](#feature-engineering)
 - [Cross Validation](#cross-validation)
@@ -22,6 +23,15 @@ In this project, we use the concepts we have seen in the lectures and labs to th
   - **0.839** of categorical accuracy.
   - **0.754** of F1 score.
 
+## Steps to reproduce our result
+1. Change DATA_TRAIN_PATH and DATA_TEST_PATH specified in run.py to the paths you have your training and testing data
+2. Run ```python run.py```
+3. The prediction will be saved at OUTPUT_PATH specified in run.py (default to test.csv)
+
+---
+
+## The following description is for the method in ridge-regression-with-fine-tuning
+
 ## Data Preparation
 In the data preparation step, we transform raw data into a relatively explainable data. In details, we mainly deal with missing value and select proper features to enhance the performance. For the basic ML methods, compared with the case removing of missing data, we oberve that missing value can still make contribution to accuracy. As a result, we keep those features with missing value for training. However, in our improved methods, we transform original data. For instance, we replace missing value with the median from the distribution of that certain feature. Additionally, we group the dataset by the feature, PRI_jet_num, to eliminate the missing value resulted from the physical constraints.
 
@@ -37,7 +47,6 @@ For choosing our best model from our improved methods, we exert 10-fold cross va
 [@Kuan Tung](https://www.aicrowd.com/participants/kuan)
 [@Chun-Hung Yeh](https://www.aicrowd.com/participants/yeh)
 [@De-Ling Liu](https://www.aicrowd.com/participants/snoopy)
-
 
 ## License
 Licensed under [MIT License](LICENSE)

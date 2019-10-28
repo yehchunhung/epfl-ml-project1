@@ -1,8 +1,9 @@
+
 # -*- coding: utf-8 -*-
 
 """
 ML project 1 - Spot the Boson
-This will produce exactly the same .csv predictions
+This will produce the .csv predictions
 which we used in our best submission to the competition system.
 """
 
@@ -14,8 +15,8 @@ from proj1_helpers import *
 def main():
     """ Main function """
     # read training and testing data
-    DATA_TRAIN_PATH = '../../data/train.csv'
-    DATA_TEST_PATH = '../../data/test.csv'
+    DATA_TRAIN_PATH = 'data/train.csv'
+    DATA_TEST_PATH = 'data/test.csv'
     y, x, _ = load_csv_data(DATA_TRAIN_PATH)
     _, x_test, ids_test = load_csv_data(DATA_TEST_PATH)
 
@@ -42,13 +43,18 @@ def main():
     nn_y_val = np.where(y_val == -1, 0, y_val)
 
     # set parameters
-    epochs = 100
+    epochs = 50
     lr = 0.001
     batch_size = 250
+    nn_architecture = [
+    {"input_dim": 30, "output_dim": 64, "activation": "relu"},
+    {"input_dim": 64, "output_dim": 64, "activation": "relu"},
+    {"input_dim": 64, "output_dim": 1, "activation": "sigmoid"},
+]
 
     # train model, get model parameters
     nn_params = train(nor_x_train.T, nn_y_train[np.newaxis,:], nor_x_val.T, nn_y_val[np.newaxis,:],
-                    NN_ARCHITECTURE, epochs, lr, batch_size, verbose=True)
+                    nn_architecture, epochs, lr, batch_size, False, 0, verbose=True)
 
     # read the best model in terms of accuracy and get the output of it
     nn_params = np.load('best_acc.npy', allow_pickle=True).item()
