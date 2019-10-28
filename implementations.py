@@ -18,7 +18,7 @@ def least_squares_GD(y, tx, initial_w, max_iters, gamma):
         grad = compute_ls_gradient(y, tx, w)
         # update w by gradient
         w = w - gamma * grad
-        # log info
+        # log training info
         # print("Gradient Descent({bi}/{ti}): loss={l}".format(
         #     bi=n_iter, ti=max_iters - 1, l=loss))
         # converge criterion
@@ -43,7 +43,7 @@ def least_squares_SGD(y, tx, initial_w, max_iters, gamma):
             grad = compute_ls_gradient(minibatch_y, minibatch_x, w)
             # update w by gradient
             w = w - gamma * grad
-        # log info
+        # log training info
         # print("Stochastic Gradient Descent({bi}/{ti}): loss={l}".format(
         #     bi=n_iter, ti=max_iters - 1, l=loss))
         # converge criterion
@@ -89,9 +89,9 @@ def logistic_regression(y, tx, initial_w, max_iters, gamma):
         # compute loss and gradient
         loss = compute_lg_loss(y, tx, w)
         grad = compute_lg_gradient(y, tx, w)
-        # update w
+        # update w by gradient
         w = w - gamma * grad
-        # log info
+        # log training info
         # if n_iter % 100 == 0:
         #     print("Current iteration={i}, loss={l}".format(i=n_iter, l=loss))
         # converge criterion
@@ -111,9 +111,9 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
         # compute loss and gradient (adding regularization term)
         loss = compute_lg_loss(y, tx, w) + lambda_ / 2 * np.linalg.norm(w)**2
         grad = compute_lg_gradient(y, tx, w) + lambda_ * w
-        # update w
+        # update w by gradient
         w = w - gamma * grad
-        # log info
+        # log training info
         # if n_iter % 100 == 0:
         #     print("Current iteration={i}, loss={l}".format(i=n_iter, l=loss))
         # converge criterion
